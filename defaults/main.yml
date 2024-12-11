@@ -1,0 +1,7 @@
+---
+# defaults file for catkin_ws
+workspace_src: "{{workspace}}/src"
+git_path_from_url: "{{ uri | urlsplit('path') }}"
+git_project_name: "{{git_path_from_url| basename | splitext |first}}"
+path_git_project: "{{workspace_src}}/{{git_project_name}}"
+git_repo_version: "HEAD"

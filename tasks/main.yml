@@ -1,0 +1,84 @@
+---
+# tasks file for catkin_ws_setup
+- name: Ensure workspace src exists
+  ansible.builtin.file:
+    state: "directory"
+    path: "{{workspace_src}}"
+    mode: "0775"
+
+- name: Checking if workspace is initialized (wstool)
+  stat:
+    path: "{{ workspace_src }}/.rosinstall"
+  register: file_data_ws
+  tags:
+    - workspace
+    - dependencies
+
+- name: create workspace (wstool init)
+  ansible.builtin.command:
+    chdir: "{{workspace_src}}"
+    cmd: "wstool init {{ workspace_src }}"
+  when: not file_data_ws.stat.exists
+  tags:
+    - workspace
+    - dependencies
+
+- name: Checking if workspace is initialized (catkin)
+  stat:
+    path: "{{ workspace }}/.catkin_tools"
+  register: file_data_catkin
+  tags:
+    - workspace
+    - dependencies
+
+- name: create workspace (catkin init)
+  ansible.builtin.command:
+    chdir: "{{workspace}}"
+    cmd: "catkin init"
+  when: not file_data_catkin.stat.exists
+  tags:
+    - workspace
+    - dependencies
+
+
+- name: Check if repository is cloned
+  stat:
+    path: "{{ workspace_src }}/{{ git_project_name }}"
+  register: file_data_git
+
+# - name: check git relatet vars
+#   ansible.builtin.pause:
+#     prompt: "repo: {{uri}} dest: {{workspace_src}}/{{git_project_name}} version: {{repo_version}}"
+
+- name: Git checkout shallow (unshallow with git fetch --unshallow)
+  ansible.builtin.git:
+    repo: "{{uri}}"
+    dest: "{{workspace_src}}/{{git_project_name}}" 
+    version: "{{git_repo_version}}"
+    depth: 1
+  when: not file_data_git.stat.exists
+  tags:
+    - workspace
+    - git
+
+- name: Find .rosinstallfiles #only works for one .rosinstall file
+  ansible.builtin.find:
+    paths: "{{path_git_project}}"
+    file_type: file
+    patterns: '*.rosinstall'
+  register: register_path_rosinstall
+
+- name: wstool merge rosinstall files
+  ansible.builtin.command:
+    cmd: "wstool merge --confirm-all --target-workspace {{workspace_src}} {{register_path_rosinstall['files'][0]['path']}}"
+  tags: merge
+
+- name: wstool update
+  ansible.builtin.command:
+    cmd: "wstool update --target-workspace {{workspace_src}}"
+  
+- name: Catkin build
+  command:
+    chdir: "{{workspace}}"
+    cmd: "catkin build"
+  when: build

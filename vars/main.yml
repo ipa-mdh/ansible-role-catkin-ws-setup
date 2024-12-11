@@ -1,0 +1,6 @@
+---
+# vars file for catkin_ws
+
+uri: "https://gitlab.cc-asp.fraunhofer.de/RobotKit/processit.git"
+workspace: "~/test_catkin"
+build: False 
